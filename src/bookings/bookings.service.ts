@@ -6,10 +6,14 @@ import {
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { EventsGateway } from '../events/events.gateway';
 
 @Injectable()
 export class BookingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventsGateway: EventsGateway,
+  ) {}
 
   async create(createBookingDto: CreateBookingDto) {
     const slot = await this.prisma.slot.findUnique({
@@ -28,7 +32,7 @@ export class BookingsService {
     }
 
     try {
-      return await this.prisma.booking.create({
+      const booking = await this.prisma.booking.create({
         data: {
           slotId: createBookingDto.slotId,
           customerName: createBookingDto.customerName,
@@ -36,6 +40,10 @@ export class BookingsService {
           status: 'active',
         },
       });
+
+      this.eventsGateway.emitSlotBooked(booking);
+
+      return booking;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

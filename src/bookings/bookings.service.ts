@@ -73,11 +73,15 @@ export class BookingsService {
     });
 
     if (result.count === 1) {
-      return this.prisma.booking.findUnique({
+      const booking = await this.prisma.booking.findUnique({
         where: {
           id: bookingId,
         },
       });
+
+      this.eventsGateway.emitSlotReleased(booking!);
+
+      return booking;
     }
 
     const booking = await this.prisma.booking.findUnique({
